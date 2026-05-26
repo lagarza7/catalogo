@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="theme-color" content="#0d0d1a"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Stock"/>
+  <title>Catálogo Stock</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d0d1a; --bg2: #13132a; --bg3: #1a1a38; --bg4: #0f0f1e;
+      --border: #2a2a4a; --accent: #6e5cf7; --accent2: #a78bfa;
+      --text: #e0e0ff; --muted: #7878aa; --dim: #5555aa;
+      --green: #30d158; --orange: #ff9f0a; --red: #ff2d55;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; overscroll-behavior: none; }
+    input, select, button { font-family: inherit; }
+    a { color: var(--accent2); }
+
+    .header { background: linear-gradient(135deg, #13132a, #1a1a3e); border-bottom: 1px solid var(--border); padding: 16px 16px 12px; position: sticky; top: 0; z-index: 10; }
+    .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .header h1 { font-family: 'DM Serif Display', serif; font-size: 20px; color: #fff; display: flex; align-items: center; gap: 8px; }
+    .header-btns { display: flex; gap: 8px; }
+    .btn-add { background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; border-radius: 10px; color: #fff; font-weight: 700; font-size: 14px; padding: 9px 14px; cursor: pointer; white-space: nowrap; }
+    .btn-scan { background: rgba(48,209,88,.12); border: 1px solid rgba(48,209,88,.35); border-radius: 10px; color: var(--green); font-weight: 700; font-size: 13px; padding: 9px 13px; cursor: pointer; white-space: nowrap; }
+    .btn-menu { background: none; border: 1px solid var(--border); border-radius: 10px; color: var(--muted); font-size: 18px; padding: 7px 11px; cursor: pointer; line-height: 1; }
+    .search-input { width: 100%; background: var(--bg4); border: 1px solid var(--border); border-radius: 10px; padding: 9px 14px; color: var(--text); font-size: 14px; outline: none; }
+    .search-input::placeholder { color: var(--muted); }
+
+    .chips { display: flex; gap: 8px; overflow-x: auto; padding: 12px 16px 4px; scrollbar-width: none; }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 12px; cursor: pointer; white-space: nowrap; font-weight: 500; transition: all .15s; }
+    .chip.active { border-color: var(--accent); background: rgba(110,92,247,.15); color: var(--accent2); font-weight: 700; }
+
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 8px 16px; }
+    .kpi { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 10px; text-align: center; }
+    .kpi-icon { font-size: 18px; }
+    .kpi-val { font-size: 20px; font-weight: 800; line-height: 1.1; margin: 2px 0; }
+    .kpi-lbl { font-size: 10px; color: var(--muted); }
+
+    .list { padding: 8px 16px 100px; display: flex; flex-direction: column; gap: 8px; }
+    .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 14px; cursor: pointer; transition: background .15s; }
+    .card:active { background: var(--bg3); }
+    .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+    .card-name { font-weight: 700; font-size: 15px; color: #fff; }
+    .card-code { font-size: 11px; color: var(--accent); font-family: monospace; font-weight: 700; margin-top: 1px; }
+    .card-mid { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; }
+    .card-proveedor { font-size: 12px; color: var(--muted); }
+    .card-stock { font-size: 13px; font-weight: 700; }
+    .card-prices { display: flex; gap: 16px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+    .price-item { flex: 1; }
+    .price-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+    .price-val { font-size: 14px; font-weight: 700; margin-top: 2px; }
+
+    .badge { border-radius: 6px; padding: 3px 8px; font-size: 11px; font-weight: 700; }
+    .badge-ok { background: var(--green); color: #fff; }
+    .badge-low { background: var(--orange); color: #fff; }
+    .badge-out { background: var(--red); color: #fff; }
+    .cat-badge { background: rgba(110,92,247,.2); border-radius: 6px; padding: 3px 8px; font-size: 11px; color: var(--accent2); }
+
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 50; }
+    .overlay.open { display: block; }
+    .sheet { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg2); border-radius: 20px 20px 0 0; border-top: 1px solid var(--border); z-index: 51; max-height: 92vh; overflow-y: auto; transform: translateY(100%); transition: transform .3s cubic-bezier(.32,1.2,.54,1); padding-bottom: 20px; }
+    .sheet.open { transform: translateY(0); }
+    .sheet-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 12px auto 4px; }
+    .sheet-content { padding: 0 20px 8px; }
+    .sheet-title { font-family: 'DM Serif Display', serif; font-size: 20px; color: #fff; margin-bottom: 16px; }
+
+    .detail-section { background: var(--bg4); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+    .detail-section-title { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; margin-bottom: 10px; }
+    .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-lbl { color: var(--muted); }
+    .detail-val { font-weight: 600; text-align: right; }
+    .btn-primary { width: 100%; padding: 13px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; border-radius: 12px; color: #fff; font-weight: 700; font-size: 15px; cursor: pointer; margin-top: 8px; }
+    .btn-danger { width: 100%; padding: 11px; background: rgba(255,45,85,.1); border: 1px solid rgba(255,45,85,.3); border-radius: 12px; color: var(--red); font-weight: 700; font-size: 14px; cursor: pointer; margin-top: 8px; }
+
+    .form-group { margin-bottom: 14px; }
+    .form-label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 5px; }
+    .form-input { width: 100%; background: var(--bg4); border: 1px solid var(--border); border-radius: 10px; padding: 11px 14px; color: var(--text); font-size: 15px; outline: none; }
+    .form-input:focus { border-color: var(--accent); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .section-divider { color: var(--dim); font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin: 18px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .margen-box { background: var(--bg4); border: 1px solid var(--border); border-radius: 10px; padding: 11px 14px; color: var(--green); font-weight: 700; font-size: 15px; }
+    .btn-row { display: flex; gap: 10px; margin-top: 20px; }
+    .btn-cancel { flex: 1; padding: 12px; background: none; border: 1px solid var(--border); border-radius: 12px; color: var(--muted); font-size: 14px; cursor: pointer; }
+    .btn-save { flex: 2; padding: 12px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; border-radius: 12px; color: #fff; font-weight: 700; font-size: 15px; cursor: pointer; }
+
+    .menu-option { display: flex; align-items: center; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+    .menu-option:last-child { border-bottom: none; }
+    .menu-option-icon { font-size: 22px; width: 36px; text-align: center; }
+    .menu-option-title { font-weight: 700; font-size: 15px; color: var(--text); }
+    .menu-option-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    .empty { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 15px; }
+    .empty-icon { font-size: 48px; margin-bottom: 12px; }
+
+    /* SCAN SHEET */
+    .scan-drop { border: 2px dashed var(--border); border-radius: 16px; padding: 32px 20px; text-align: center; cursor: pointer; transition: border-color .2s; margin-bottom: 16px; }
+    .scan-drop.drag { border-color: var(--accent); background: rgba(110,92,247,.07); }
+    .scan-drop-icon { font-size: 42px; margin-bottom: 10px; }
+    .scan-drop-title { font-weight: 700; font-size: 16px; color: #fff; margin-bottom: 4px; }
+    .scan-drop-sub { font-size: 13px; color: var(--muted); }
+    .scan-preview { width: 100%; border-radius: 12px; max-height: 200px; object-fit: contain; background: var(--bg4); display: none; margin-bottom: 14px; }
+    .scan-preview.show { display: block; }
+    .btn-scan-go { width: 100%; padding: 14px; background: linear-gradient(135deg, #1a8a3a, var(--green)); border: none; border-radius: 12px; color: #fff; font-weight: 700; font-size: 15px; cursor: pointer; display: none; }
+    .btn-scan-go.show { display: block; }
+
+    /* LOADING */
+    .scanning-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 200; flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
+    .scanning-overlay.show { display: flex; }
+    .scan-spinner { width: 52px; height: 52px; border: 4px solid var(--border); border-top-color: var(--green); border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .scan-spinner-text { color: var(--green); font-weight: 700; font-size: 16px; }
+    .scan-spinner-sub { color: var(--muted); font-size: 13px; }
+
+    /* RESULTS SHEET */
+    .result-card { background: var(--bg4); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: border-color .15s; }
+    .result-card:active { border-color: var(--accent); }
+    .result-card-info { flex: 1; }
+    .result-card-name { font-weight: 700; font-size: 14px; color: #fff; margin-bottom: 3px; }
+    .result-card-detail { font-size: 12px; color: var(--muted); }
+    .result-card-price { text-align: right; }
+    .result-card-compra { font-size: 12px; color: var(--orange); font-weight: 600; }
+    .result-card-venta { font-size: 14px; color: var(--green); font-weight: 700; }
+    .result-add-btn { margin-left: 12px; background: rgba(110,92,247,.2); border: 1px solid rgba(110,92,247,.4); border-radius: 8px; color: var(--accent2); font-size: 18px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; font-weight: 700; }
+    .result-added { background: rgba(48,209,88,.15); border-color: rgba(48,209,88,.4); color: var(--green); }
+    .result-notice { font-size: 12px; color: var(--muted); background: var(--bg4); border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; line-height: 1.5; }
+    .btn-add-all { width: 100%; padding: 13px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; border-radius: 12px; color: #fff; font-weight: 700; font-size: 15px; cursor: pointer; margin-top: 4px; }
+
+    #scanFileInput { display: none; }
+    #importFile { display: none; }
+    .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(80px); background: #30d158; color: #fff; padding: 12px 24px; border-radius: 30px; font-weight: 700; font-size: 14px; z-index: 300; transition: transform .3s ease; pointer-events: none; white-space: nowrap; }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <h1>📦 Catálogo Stock</h1>
+    <div class="header-btns">
+      <button class="btn-scan" onclick="openSheet('scanSheet')">📷 Escanear</button>
+      <button class="btn-menu" onclick="openSheet('menuSheet')">⋯</button>
+      <button class="btn-add" onclick="openForm(null)">＋</button>
+    </div>
+  </div>
+  <input class="search-input" id="searchInput" placeholder="Buscar producto o proveedor..." oninput="render()"/>
+</div>
+
+<div class="chips" id="chips"></div>
+<div class="kpis" id="kpis"></div>
+<div class="list" id="list"></div>
+
+<div class="overlay" id="overlay" onclick="closeAll()"></div>
+
+<!-- DETAIL SHEET -->
+<div class="sheet" id="detailSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-content" id="detailContent"></div>
+</div>
+
+<!-- FORM SHEET -->
+<div class="sheet" id="formSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-content">
+    <p class="sheet-title" id="formTitle">Nuevo producto</p>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Código</label><input class="form-input" id="fCodigo"/></div>
+      <div class="form-group"><label class="form-label">Categoría</label>
+        <select class="form-input" id="fCategoria">
+          <option>Electrónica</option><option>Periféricos</option><option>Mobiliario</option><option>Papelería</option><option>Otro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Nombre del producto</label><input class="form-input" id="fNombre"/></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Stock actual</label><input class="form-input" id="fStock" type="number" min="0" oninput="calcMargen()"/></div>
+      <div class="form-group"><label class="form-label">Stock mínimo</label><input class="form-input" id="fStockMin" type="number" min="0"/></div>
+    </div>
+    <div class="section-divider">Proveedor</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Empresa</label><input class="form-input" id="fProveedor"/></div>
+      <div class="form-group"><label class="form-label">Contacto</label><input class="form-input" id="fContacto"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Teléfono</label><input class="form-input" id="fTelefono" type="tel"/></div>
+      <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="fEmail" type="email"/></div>
+    </div>
+    <div class="section-divider">Precios</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Precio compra $</label><input class="form-input" id="fCompra" type="number" min="0" oninput="calcMargen()"/></div>
+      <div class="form-group"><label class="form-label">Precio venta $</label><input class="form-input" id="fVenta" type="number" min="0" oninput="calcMargen()"/></div>
+    </div>
+    <div class="form-group"><label class="form-label">Margen calculado</label><div class="margen-box" id="fMargen">0%</div></div>
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeAll()">Cancelar</button>
+      <button class="btn-save" onclick="saveProduct()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCAN SHEET -->
+<div class="sheet" id="scanSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-content">
+    <p class="sheet-title">📷 Escanear lista de precios</p>
+    <div class="scan-drop" id="scanDrop" onclick="document.getElementById('scanFileInput').click()">
+      <div class="scan-drop-icon">🖼️</div>
+      <div class="scan-drop-title">Subir imagen</div>
+      <div class="scan-drop-sub">Captura de lista de precios, catálogo o factura</div>
+    </div>
+    <img class="scan-preview" id="scanPreview" src="" alt="preview"/>
+    <button class="btn-scan-go" id="btnScanGo" onclick="runScan()">🔍 Detectar productos</button>
+  </div>
+</div>
+
+<!-- RESULTS SHEET -->
+<div class="sheet" id="resultsSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-content">
+    <p class="sheet-title">✅ Productos detectados</p>
+    <div class="result-notice" id="resultNotice"></div>
+    <div id="resultList"></div>
+    <button class="btn-add-all" onclick="addAllResults()">＋ Agregar todos al catálogo</button>
+  </div>
+</div>
+
+<!-- MENU SHEET -->
+<div class="sheet" id="menuSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-content">
+    <p class="sheet-title">Opciones</p>
+    <div class="menu-option" onclick="exportarJSON()">
+      <div class="menu-option-icon">📤</div>
+      <div><div class="menu-option-title">Exportar catálogo</div><div class="menu-option-desc">Descarga un .json con todos tus productos</div></div>
+    </div>
+    <div class="menu-option" onclick="document.getElementById('importFile').click()">
+      <div class="menu-option-icon">📥</div>
+      <div><div class="menu-option-title">Importar catálogo</div><div class="menu-option-desc">Carga un .json exportado anteriormente</div></div>
+    </div>
+    <div class="menu-option" onclick="borrarTodo()">
+      <div class="menu-option-icon">🗑️</div>
+      <div><div class="menu-option-title" style="color:var(--red)">Borrar todo</div><div class="menu-option-desc">Elimina todos los productos del catálogo</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- SCANNING OVERLAY -->
+<div class="scanning-overlay" id="scanningOverlay">
+  <div class="scan-spinner"></div>
+  <div class="scan-spinner-text">Analizando imagen...</div>
+  <div class="scan-spinner-sub">Claude está leyendo tu lista de precios</div>
+</div>
+
+<input type="file" id="scanFileInput" accept="image/*" onchange="onImageSelected(event)"/>
+<input type="file" id="importFile" accept=".json" onchange="importarJSON(event)"/>
+<div class="toast" id="toast"></div>
+
+<script>
+var STORAGE_KEY = 'catalogo_stock_v1';
+var CATS = ['Todas','Electrónica','Periféricos','Mobiliario','Papelería','Otro'];
+var scanImageBase64 = null;
+var scanResults = [];
+
+var defaultProducts = [
+  {id:1,codigo:'PRD-001',nombre:'Notebook HP 15"',categoria:'Electrónica',stock:12,stockMin:5,proveedor:'TechDistrib SA',contacto:'Carlos Méndez',telefono:'+54 11 4521-7890',email:'cmendes@techdistrib.com',precioCompra:420000,precioVenta:580000},
+  {id:2,codigo:'PRD-002',nombre:'Mouse Inalámbrico Logitech',categoria:'Periféricos',stock:3,stockMin:10,proveedor:'ImportTech',contacto:'Ana López',telefono:'+54 11 3312-4455',email:'ana.lopez@importtech.ar',precioCompra:15000,precioVenta:24500},
+  {id:3,codigo:'PRD-003',nombre:'Teclado Mecánico RGB',categoria:'Periféricos',stock:8,stockMin:5,proveedor:'ImportTech',contacto:'Ana López',telefono:'+54 11 3312-4455',email:'ana.lopez@importtech.ar',precioCompra:32000,precioVenta:51000},
+  {id:4,codigo:'PRD-004',nombre:'Monitor 24" Full HD',categoria:'Electrónica',stock:0,stockMin:3,proveedor:'TechDistrib SA',contacto:'Carlos Méndez',telefono:'+54 11 4521-7890',email:'cmendes@techdistrib.com',precioCompra:185000,precioVenta:265000},
+  {id:5,codigo:'PRD-005',nombre:'Silla Ergonómica',categoria:'Mobiliario',stock:6,stockMin:2,proveedor:'OffiMax',contacto:'Martina Ruiz',telefono:'+54 11 5566-9900',email:'mruiz@offimax.com.ar',precioCompra:95000,precioVenta:149000},
+  {id:6,codigo:'PRD-006',nombre:'Resma A4 500 hojas',categoria:'Papelería',stock:45,stockMin:20,proveedor:'PaperStock',contacto:'Jorge Villar',telefono:'+54 11 2244-6688',email:'jvillar@paperstock.ar',precioCompra:2800,precioVenta:4200}
+];
+
+var stored = localStorage.getItem(STORAGE_KEY);
+var products = stored ? JSON.parse(stored) : defaultProducts;
+var activeCat = 'Todas';
+var editingId = null;
+
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(products)); }
+function fmt(n) { return '$' + Number(n).toLocaleString('es-AR'); }
+function badge(p) {
+  if (p.stock === 0) return '<span class="badge badge-out">SIN STOCK</span>';
+  if (p.stock <= p.stockMin) return '<span class="badge badge-low">BAJO</span>';
+  return '<span class="badge badge-ok">OK</span>';
+}
+
+function renderChips() {
+  document.getElementById('chips').innerHTML = CATS.map(function(c) {
+    return '<button class="chip' + (c===activeCat?' active':'') + '" onclick="setCat(\'' + c + '\')">' + c + '</button>';
+  }).join('');
+}
+function setCat(c) { activeCat = c; render(); }
+
+function renderKPIs() {
+  var sinStock = products.filter(function(p){return p.stock===0;}).length;
+  var bajo = products.filter(function(p){return p.stock>0&&p.stock<=p.stockMin;}).length;
+  var valor = products.reduce(function(a,p){return a+p.stock*p.precioCompra;},0);
+  var kpiData = [
+    {icon:'🗂️',val:products.length,lbl:'Productos',color:'#a78bfa'},
+    {icon:'⚠️',val:sinStock,lbl:'Sin stock',color:'#ff2d55'},
+    {icon:'📉',val:bajo,lbl:'Stock bajo',color:'#ff9f0a'},
+    {icon:'💰',val:'$'+Math.round(valor/1000)+'k',lbl:'Inventario',color:'#30d158'}
+  ];
+  document.getElementById('kpis').innerHTML = kpiData.map(function(k){
+    return '<div class="kpi"><div class="kpi-icon">'+k.icon+'</div><div class="kpi-val" style="color:'+k.color+'">'+k.val+'</div><div class="kpi-lbl">'+k.lbl+'</div></div>';
+  }).join('');
+}
+
+function render() {
+  renderChips(); renderKPIs();
+  var q = document.getElementById('searchInput').value.toLowerCase();
+  var list = products.filter(function(p){ return activeCat==='Todas'||p.categoria===activeCat; })
+    .filter(function(p){ return p.nombre.toLowerCase().indexOf(q)>=0||p.codigo.toLowerCase().indexOf(q)>=0||p.proveedor.toLowerCase().indexOf(q)>=0; });
+  if (!list.length) { document.getElementById('list').innerHTML='<div class="empty"><div class="empty-icon">🔍</div>Sin resultados</div>'; return; }
+  document.getElementById('list').innerHTML = list.map(function(p){
+    var margen = p.precioCompra>0?(((p.precioVenta-p.precioCompra)/p.precioCompra)*100).toFixed(1):0;
+    var mColor = margen>30?'#30d158':margen>10?'#ff9f0a':'#ff2d55';
+    return '<div class="card" onclick="openDetail('+p.id+')">' +
+      '<div class="card-top"><div><div class="card-name">'+p.nombre+'</div>' +
+      '<div class="card-code">'+p.codigo+' &middot; <span class="cat-badge">'+p.categoria+'</span></div></div>'+badge(p)+'</div>' +
+      '<div class="card-mid"><div class="card-proveedor">🏭 '+p.proveedor+' &middot; '+p.contacto+'</div><div class="card-stock">'+p.stock+' uds</div></div>' +
+      '<div class="card-prices">' +
+      '<div class="price-item"><div class="price-lbl">Compra</div><div class="price-val" style="color:#ff9f0a">'+fmt(p.precioCompra)+'</div></div>' +
+      '<div class="price-item"><div class="price-lbl">Venta</div><div class="price-val" style="color:#30d158">'+fmt(p.precioVenta)+'</div></div>' +
+      '<div class="price-item"><div class="price-lbl">Margen</div><div class="price-val" style="color:'+mColor+'">'+margen+'%</div></div>' +
+      '</div></div>';
+  }).join('');
+}
+
+function openDetail(id) {
+  var p = null;
+  for(var i=0;i<products.length;i++){if(products[i].id===id){p=products[i];break;}}
+  if(!p) return;
+  var margen = p.precioCompra>0?(((p.precioVenta-p.precioCompra)/p.precioCompra)*100).toFixed(1):0;
+  var ganancia = p.precioVenta-p.precioCompra;
+  document.getElementById('detailContent').innerHTML =
+    '<p class="sheet-title">'+p.nombre+'</p>' +
+    '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap"><span class="cat-badge">'+p.categoria+'</span>' +
+    '<span style="font-family:monospace;font-size:12px;color:#6e5cf7;font-weight:700">'+p.codigo+'</span>'+badge(p)+'</div>' +
+    '<div class="detail-section"><div class="detail-section-title">Stock</div>' +
+    '<div class="detail-row"><span class="detail-lbl">Actual</span><span class="detail-val" style="font-size:20px;font-weight:800">'+p.stock+'</span></div>' +
+    '<div class="detail-row"><span class="detail-lbl">Mínimo</span><span class="detail-val">'+p.stockMin+'</span></div></div>' +
+    '<div class="detail-section"><div class="detail-section-title">Proveedor</div>' +
+    '<div class="detail-row"><span class="detail-lbl">Empresa</span><span class="detail-val">'+p.proveedor+'</span></div>' +
+    '<div class="detail-row"><span class="detail-lbl">Contacto</span><span class="detail-val">'+p.contacto+'</span></div>' +
+    '<div class="detail-row"><span class="detail-lbl">Teléfono</span><a href="tel:'+p.telefono+'" class="detail-val">'+p.telefono+'</a></div>' +
+    '<div class="detail-row"><span class="detail-lbl">Email</span><a href="mailto:'+p.email+'" class="detail-val" style="font-size:12px">'+p.email+'</a></div></div>' +
+    '<div class="detail-section"><div class="detail-section-title">Precios</div>' +
+    '<div class="detail-row"><span class="detail-lbl">Compra</span><span class="detail-val" style="color:#ff9f0a">'+fmt(p.precioCompra)+'</span></div>' +
+    '<div class="detail-row"><span class="detail-lbl">Venta</span><span class="detail-val" style="color:#30d158">'+fmt(p.precioVenta)+'</span></div>' +
+    '<div class="detail-row"><span class="detail-lbl">Ganancia unitaria</span><span class="detail-val" style="color:#a78bfa">'+fmt(ganancia)+'</span></div>' +
+    '<div class="detail-row"><span class="detail-lbl">Margen</span><span class="detail-val">'+margen+'%</span></div></div>' +
+    '<button class="btn-primary" onclick="closeAll();openForm('+p.id+')">✏️ Editar producto</button>' +
+    '<button class="btn-danger" onclick="deleteProduct('+p.id+')">🗑️ Eliminar</button>';
+  openSheet('detailSheet');
+}
+
+function openForm(id) {
+  editingId = id;
+  var p = {};
+  if(id){for(var i=0;i<products.length;i++){if(products[i].id===id){p=products[i];break;}}}
+  document.getElementById('formTitle').textContent = id?'Editar producto':'Nuevo producto';
+  document.getElementById('fCodigo').value = p.codigo||'';
+  document.getElementById('fNombre').value = p.nombre||'';
+  document.getElementById('fCategoria').value = p.categoria||'Electrónica';
+  document.getElementById('fStock').value = p.stock||0;
+  document.getElementById('fStockMin').value = p.stockMin||0;
+  document.getElementById('fProveedor').value = p.proveedor||'';
+  document.getElementById('fContacto').value = p.contacto||'';
+  document.getElementById('fTelefono').value = p.telefono||'';
+  document.getElementById('fEmail').value = p.email||'';
+  document.getElementById('fCompra').value = p.precioCompra||0;
+  document.getElementById('fVenta').value = p.precioVenta||0;
+  calcMargen();
+  openSheet('formSheet');
+}
+
+function calcMargen() {
+  var c = parseFloat(document.getElementById('fCompra').value)||0;
+  var v = parseFloat(document.getElementById('fVenta').value)||0;
+  var m = c>0?(((v-c)/c)*100).toFixed(1):0;
+  var el = document.getElementById('fMargen');
+  el.textContent = m+'%';
+  el.style.color = m>30?'#30d158':m>10?'#ff9f0a':'#ff2d55';
+}
+
+function saveProduct() {
+  var form = {
+    codigo: document.getElementById('fCodigo').value.trim(),
+    nombre: document.getElementById('fNombre').value.trim(),
+    categoria: document.getElementById('fCategoria').value,
+    stock: parseFloat(document.getElementById('fStock').value)||0,
+    stockMin: parseFloat(document.getElementById('fStockMin').value)||0,
+    proveedor: document.getElementById('fProveedor').value.trim(),
+    contacto: document.getElementById('fContacto').value.trim(),
+    telefono: document.getElementById('fTelefono').value.trim(),
+    email: document.getElementById('fEmail').value.trim(),
+    precioCompra: parseFloat(document.getElementById('fCompra').value)||0,
+    precioVenta: parseFloat(document.getElementById('fVenta').value)||0
+  };
+  if(!form.nombre){alert('El nombre es obligatorio');return;}
+  if(editingId){
+    products = products.map(function(p){return p.id===editingId?Object.assign({},p,form):p;});
+  } else {
+    form.id = Date.now();
+    products.push(form);
+  }
+  save(); closeAll(); render();
+}
+
+function deleteProduct(id) {
+  if(!confirm('Eliminar este producto?')) return;
+  products = products.filter(function(p){return p.id!==id;});
+  save(); closeAll(); render();
+}
+
+// ── SCAN ──────────────────────────────────────────────
+function onImageSelected(e) {
+  var file = e.target.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    scanImageBase64 = ev.target.result.split(',')[1];
+    var preview = document.getElementById('scanPreview');
+    preview.src = ev.target.result;
+    preview.classList.add('show');
+    document.getElementById('btnScanGo').classList.add('show');
+    document.getElementById('scanDrop').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+function runScan() {
+  if(!scanImageBase64) return;
+  closeAll();
+  document.getElementById('scanningOverlay').classList.add('show');
+
+  var prompt = 'Analizá esta imagen de una lista de precios o catálogo de proveedor. ' +
+    'Extraé TODOS los productos que puedas identificar. ' +
+    'Para cada producto devolvé un objeto JSON con estos campos exactos: ' +
+    'nombre (string), codigo (string, si no hay poné ""), categoria (string: Electrónica|Periféricos|Mobiliario|Papelería|Otro), ' +
+    'precioCompra (number, el precio que aparece en la lista, si hay uno solo usalo como compra), ' +
+    'precioVenta (number, si hay precio de venta usalo, si no calculá 40% más que compra), ' +
+    'proveedor (string, nombre de la empresa si aparece en la imagen, si no ponés ""), ' +
+    'contacto (string, nombre de persona si aparece, si no ""), ' +
+    'telefono (string, si aparece, si no ""), ' +
+    'email (string, si aparece, si no ""). ' +
+    'Respondé ÚNICAMENTE con un array JSON válido, sin texto adicional, sin markdown, sin backticks. ' +
+    'Ejemplo: [{"nombre":"Teclado USB","codigo":"TEC-01","categoria":"Periféricos","precioCompra":5000,"precioVenta":7000,"proveedor":"","contacto":"","telefono":"","email":""}]';
+
+  fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: scanImageBase64 } },
+          { type: 'text', text: prompt }
+        ]
+      }]
+    })
+  })
+  .then(function(res){ return res.json(); })
+  .then(function(data) {
+    document.getElementById('scanningOverlay').classList.remove('show');
+    var text = '';
+    if(data.content && data.content.length > 0) {
+      for(var i=0;i<data.content.length;i++){
+        if(data.content[i].type==='text') { text = data.content[i].text; break; }
+      }
+    }
+    var clean = text.replace(/```json/g,'').replace(/```/g,'').trim();
+    var parsed;
+    try { parsed = JSON.parse(clean); } catch(e) { alert('No se pudieron detectar productos. Intentá con una imagen más clara.'); return; }
+    if(!Array.isArray(parsed)||parsed.length===0){ alert('No se detectaron productos en la imagen.'); return; }
+    scanResults = parsed.map(function(p,i){ return Object.assign({_idx:i, _added:false}, p); });
+    showResults();
+  })
+  .catch(function(err) {
+    document.getElementById('scanningOverlay').classList.remove('show');
+    alert('Error al conectar con la API. Verificá tu conexión a internet.');
+  });
+}
+
+function showResults() {
+  var proveedor = '';
+  if(scanResults.length>0 && scanResults[0].proveedor) proveedor = scanResults[0].proveedor;
+  document.getElementById('resultNotice').textContent =
+    'Se detectaron ' + scanResults.length + ' producto(s)' + (proveedor ? ' de ' + proveedor : '') + '. Tocá ＋ para agregar uno a uno, o usá el botón de abajo para agregarlos todos.';
+  renderResults();
+  openSheet('resultsSheet');
+  // reset scan
+  scanImageBase64 = null;
+  document.getElementById('scanPreview').classList.remove('show');
+  document.getElementById('scanPreview').src='';
+  document.getElementById('btnScanGo').classList.remove('show');
+  document.getElementById('scanDrop').style.display='';
+}
+
+function renderResults() {
+  document.getElementById('resultList').innerHTML = scanResults.map(function(p){
+    return '<div class="result-card" id="rc'+p._idx+'">' +
+      '<div class="result-card-info">' +
+      '<div class="result-card-name">' + p.nombre + '</div>' +
+      '<div class="result-card-detail">' + (p.proveedor||'Sin proveedor') + (p.codigo?' &middot; '+p.codigo:'') + '</div>' +
+      '</div>' +
+      '<div class="result-card-price">' +
+      '<div class="result-card-compra">C: ' + fmt(p.precioCompra||0) + '</div>' +
+      '<div class="result-card-venta">V: ' + fmt(p.precioVenta||0) + '</div>' +
+      '</div>' +
+      '<div class="result-add-btn ' + (p._added?'result-added':'') + '" onclick="addSingleResult('+p._idx+')">' + (p._added?'✓':'＋') + '</div>' +
+      '</div>';
+  }).join('');
+}
+
+function addSingleResult(idx) {
+  var p = scanResults[idx];
+  if(p._added) return;
+  var newP = {
+    id: Date.now() + idx,
+    codigo: p.codigo||'',
+    nombre: p.nombre||'Producto',
+    categoria: p.categoria||'Otro',
+    stock: 0, stockMin: 0,
+    proveedor: p.proveedor||'',
+    contacto: p.contacto||'',
+    telefono: p.telefono||'',
+    email: p.email||'',
+    precioCompra: parseFloat(p.precioCompra)||0,
+    precioVenta: parseFloat(p.precioVenta)||0
+  };
+  products.push(newP);
+  save();
+  scanResults[idx]._added = true;
+  renderResults();
+  render();
+  showToast('✅ ' + p.nombre + ' agregado');
+}
+
+function addAllResults() {
+  var count = 0;
+  for(var i=0;i<scanResults.length;i++){
+    if(!scanResults[i]._added){
+      addSingleResult(i);
+      count++;
+    }
+  }
+  if(count>0) showToast('✅ ' + count + ' productos agregados');
+  closeAll();
+}
+
+// ── EXPORT / IMPORT ───────────────────────────────────
+function exportarJSON() {
+  var fecha = new Date().toISOString().slice(0,10);
+  var nombre = 'catalogo-stock-'+fecha+'.json';
+  var blob = new Blob([JSON.stringify(products,null,2)],{type:'application/json'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href=url; a.download=nombre; a.click();
+  URL.revokeObjectURL(url);
+  closeAll();
+  showToast('Exportado: '+nombre);
+}
+
+function importarJSON(e) {
+  var file = e.target.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev){
+    try{
+      var data = JSON.parse(ev.target.result);
+      if(!Array.isArray(data)) throw new Error();
+      if(!confirm('Importar '+data.length+' productos? Esto reemplazará el catálogo actual.')) return;
+      products=data; save(); closeAll(); render();
+      showToast(data.length+' productos importados');
+    }catch(e){ alert('Archivo inválido.'); }
+  };
+  reader.readAsText(file);
+  e.target.value='';
+}
+
+function borrarTodo() {
+  if(!confirm('Borrar TODOS los productos?')) return;
+  products=[]; save(); closeAll(); render();
+  showToast('Catálogo borrado');
+}
+
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 3000);
+}
+
+function openSheet(id) {
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById(id).classList.add('open');
+}
+
+function closeAll() {
+  document.getElementById('overlay').classList.remove('open');
+  var sheets = document.querySelectorAll('.sheet');
+  for(var i=0;i<sheets.length;i++){ sheets[i].classList.remove('open'); }
+}
+
+render();
+</script>
+</body>
+</html>
